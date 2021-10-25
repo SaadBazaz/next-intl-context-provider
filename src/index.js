@@ -1,44 +1,65 @@
 import React from "react";
-import { IntlProvider, addLocaleData } from "next-intl";
+import Types from "prop-types";
+import { IntlProvider } from "next-intl";
+// import en from "next-intl/locale-data/en";
+// import ja from "next-intl/locale-data/ja";
+import jaTranslation from "../locales/ja";
+import enTranslation from "../locales/en";
 
-const { Provider, Consumer } = React.createContext();
+// addLocaleData([...en, ...ja]);
 
-class NextIntlContextProvider extends React.Component {
-  constructor(props) {
-    super(props);
+// Change django language cookie
+import cookieCutter from 'cookie-cutter'
 
-    const updateProps = newProps =>
-      this.setState(prevState => ({
-        providerProps: { ...prevState.providerProps, ...newProps }
-      }));
+export const Context = React.createContext();
+
+class IntlProviderWrapper extends React.Component {
+  
+constructor(...args) {
+    function myCustomErrorFunction (){
+            console.log ("NextIntl Error")
+        }
+    super(...args);
+
+    this.switchToEnglish = () => {
+      this.setState({ locale: "en", messages: enTranslation });
+      // Set a cookie (just an example)
+      cookieCutter.set('django_language', 'en')
+    }
+
+    this.switchToJapanese = () => {
+      this.setState({ locale: "ja", messages: jaTranslation });
+      // Set a cookie (just an example)
+      cookieCutter.set('django_language', 'ja')
+    }
+
+    // pass everything in state to avoid creating object inside render method (like explained in the documentation)
     this.state = {
-      updateProps,
-      providerProps: { ...props.initialProps }
+      locale: "en",
+      messages: enTranslation,
+      switchToEnglish: this.switchToEnglish, 
+      switchToJapanese: this.switchToJapanese 
     };
   }
+  
 
   render() {
     const { children } = this.props;
+    const { locale, messages } = this.state;
     return (
-      <Provider value={this.state}>
+      <Context.Provider value={this.state}>
         <IntlProvider
-          key={this.state.providerProps.locale}
-          {...this.state.providerProps}
+          key={locale}
+          locale={locale}
+          messages={messages}
+          defaultLocale="en"
+          onError={this.myCustomErrorFunction}
         >
           {children}
         </IntlProvider>
-      </Provider>
+      </Context.Provider>
     );
   }
 }
 
-function loadLocaleData(locales) {
-  const loc = locales.map(l => [...require(`next-intl/locale-data/${l}`)]);
-  addLocaleData(loc.reduce((a, b) => a.concat(b), []));
-}
-
-export {
-  NextIntlContextProvider as IntlProvider,
-  Consumer as IntlConsumer,
-  loadLocaleData
-};
+export { IntlProviderWrapper, Context as IntlContext };
